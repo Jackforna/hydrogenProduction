@@ -1,4 +1,4 @@
- class hydrogenStorage:
+class hydrogenStorage:
     def __init__(self, max_capacity, pressure):
         #Inizializza un HSS.
         self.max_capacity = max_capacity

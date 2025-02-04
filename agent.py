@@ -1,4 +1,4 @@
- from electrolyser import Electrolyser
+from electrolyser import Electrolyser
 from HSS import hydrogenStorage
 
 storage = hydrogenStorage(max_capacity=500, pressure=350)
