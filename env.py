@@ -1,5 +1,5 @@
 import gymnasium as gym
-from gym import spaces
+from gymnasium import spaces
 import numpy as np
 from enum import Enum
 from electrolyser import Electrolyser
@@ -14,15 +14,16 @@ class Actions(Enum):
     BLOCK_SELL: 4              #bloccare la vendita dell'energia prodotta dall'idrogeno
 
 
-class HRV_env(gym.Env):
+class HRS_env(gym.Env):
 
     def __init__(self):
+
         self.action_space = spaces.Discrete(5)  #5 azioni discrete perchè rappresentano scelte finite
 
         #gli stati invece saranno continui poichè rappresentano grandezze variabili nel tempo
-        #Stato: quantità idrogeno stoccato, energia prodotta, prezzo produzione idrogeno, prezzo vendita elettricità, prezzo_idrogeno, domanda elettricità, elettrolita in azione, celle in azione
+        #Stato: quantità idrogeno stoccato, energia prodotta, costo produzione idrogeno, prezzo vendita elettricità, prezzo_idrogeno, domanda elettricità, elettrolita in azione, celle in azione
         self.observation_space = spaces.Box(low = np.array([0, 0, 0, 0, 0, 0, 0, 0]),
-                                            high = np.array([100, 100, 10, 10, 10, 100, 1, 1]),
+                                            high = np.array([500, 100, 10, 10, 10, 100, 1, 1]),
                                             dtype = np.float32)
 
         self.storage = hydrogenStorage(max_capacity=500, pressure=350)
@@ -30,10 +31,8 @@ class HRV_env(gym.Env):
         self.electrolyser = Electrolyser(min_power=10, max_power=50, period=10, HSS=self.storage, active=True)
         self.state = np.array([0, 0, 5, 5, 100, 5, electrolyser.active, cell.active], dtype = np.float32)  #stato iniziale da definire
 
-
-
-
     def step(self, action):
+
         hydrogen, energy_produced, production_cost, elec_price, hydrogen_price, elec_demand, electrolyser_on, cell_on = self.state
         revenue = 0
         loss_power = 0
@@ -80,10 +79,8 @@ class HRV_env(gym.Env):
                 loss_power += loss
                 costs = production_cost
 
-
-
         reward = revenue - costs - (loss_power * elec_price)
-        self.state = np.array([hydrogen, energy_produced, production_cost, elec_price, elec_demand, electrolyser_on, cell_on], dtype=np.float32)   #stato aggiornato
+        self.state = np.array([self.HSS.actual_quantity, energy_produced, production_cost, elec_price, elec_demand, electrolyser_on, cell_on], dtype=np.float32)   #stato aggiornato
         done = False
 
         return self.state, reward, done, {}
