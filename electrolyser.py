@@ -11,11 +11,11 @@ class Electrolyser:
    
     def powerSupplied(self):
         #Genera un valore di potenza seguendo un andamento sinusoidale.
-            width = (self.max_power - self.min_power) / 2
-            avg = (self.max_power + self.min_power) / 2
-            power = avg + width * math.sin((2 * math.pi / self.period) * self.time)
-            self.time += 1
-            return power
+        width = (self.max_power - self.min_power) / 2
+        avg = (self.max_power + self.min_power) / 2
+        power = avg + abs(10* width * math.sin((2 * math.pi / self.period) * self.time))
+        self.time += 1
+        return power
    
     def produceHydrogen(self):  #ritorna la potenza sprecata
         #Calcola la quantità di idrogeno prodotta in base alla potenza generata e la inserisce nel sistema di stoccaggio.
@@ -28,8 +28,8 @@ class Electrolyser:
                 return hydrogen_produced, 0
             else:
                 self.HSS.addHydrogen(self.HSS.max_capacity - self.HSS.actual_quantity) #riempie al massimo HSS ma perdita di potenza in eccesso, capire come gestirla
-            print(f"Generated power: {power_generated:.2f} kW, producing {hydrogen_produced:.2f} m3 of hydrogen.")
-            loss = (hydrogen_produced - (self.HSS.max_capacity - self.HSS.actual_quantity))/0.18
+                loss = (hydrogen_produced - (self.HSS.max_capacity - self.HSS.actual_quantity))/0.18
+            print(f"Generated power: {power_generated:.2f} kW, producing {hydrogen_produced:.2f} m³ of hydrogen.")
             return (self.HSS.max_capacity - self.HSS.actual_quantity), loss
         else:
             self.active = False
