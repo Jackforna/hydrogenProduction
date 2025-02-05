@@ -17,6 +17,7 @@ class Actions(Enum):
 class HRS_env(gym.Env):
 
     def __init__(self):
+        super(HRS_env, self).__init__()
 
         self.action_space = spaces.Discrete(5)  #5 azioni discrete perchè rappresentano scelte finite
 
@@ -29,16 +30,20 @@ class HRS_env(gym.Env):
         self.storage = hydrogenStorage(max_capacity=500, pressure=350)
         self.cell = FuelCell(power = 50, efficiency = 0.6, hydrogen_consumption = 1.5, HSS=self.storage, active=True)
         self.electrolyser = Electrolyser(min_power=10, max_power=50, period=10, HSS=self.storage, active=True)
-        self.state = np.array([0, 0, 5, 5, 100, 5, electrolyser.active, cell.active], dtype = np.float32)  #stato iniziale da definire
+        self.state = np.array([0, 0, 5, 5, 5, 100, self.electrolyser.active, self.cell.active], dtype = np.float32)  #stato iniziale da definire
+        self.rew_arr = []
+        self.stor_arr = []
+        self.loss_arr = []
+
 
     def step(self, action):
 
         hydrogen, energy_produced, production_cost, elec_price, hydrogen_price, elec_demand, electrolyser_on, cell_on = self.state
-        revenue = 0
         loss_power = 0
+        revenue = 0
         costs = 0
 
-        if action == Actions.PRODUCE.value:
+        if action == 0:
             if not (self.electrolyser.active):
                 self.electrolyser.active = True
             electrolyser_on = 1
@@ -46,7 +51,7 @@ class HRS_env(gym.Env):
             loss_power += loss
             revenue += hydrogen_produced * hydrogen_price
             costs = production_cost
-        elif action == Actions.SELL_HYDR.value:
+        elif action == 1:
             if not(self.cell.active):
                 self.cell.active = True
             cell_on = 1
@@ -55,7 +60,7 @@ class HRS_env(gym.Env):
                 revenue += generate_power * elec_price
             else:
                 revenue -= 100 #non viene soddisfatta la richiesta energetica
-        elif action == Actions.SELL_ELEC.value:
+        elif action == 2:
             if self.cell.active:
                 self.cell.active = False
             cell_on = 0
@@ -64,33 +69,41 @@ class HRS_env(gym.Env):
             else:
                 revenue += energy_produced * elec_price
 
-        elif action == Actions.BLOCK_PRODUCTION.value:
+        elif action == 3:
             if self.electrolyser.active:
                 self.electrolyser.active = False
             electrolyser_on = 0
-            if self.HSS.actual_quantity < self.HSS.max_capacity & energy_produced > elec_demand:
+            if self.storage.actual_quantity < self.storage.max_capacity and energy_produced > elec_demand:
                 loss_power += energy_produced - elec_demand
-        elif action == Actions.BLOCK_SELL.value:
+        elif action == 4:
             if self.cell.active:
                 self.cell.active = False
             cell_on = 0
-            if self.HSS.actual_quantity == self.HSS.max_capacity & elec_demand>0 & electrolyser_on:
+            if self.storage.actual_quantity == self.storage.max_capacity and elec_demand>0 and electrolyser_on:
                 hydrogen_produced, loss = self.electrolyser.produceHydrogen()
                 loss_power += loss
                 costs = production_cost
 
         reward = revenue - costs - (loss_power * elec_price)
-        self.state = np.array([self.HSS.actual_quantity, energy_produced, production_cost, elec_price, elec_demand, electrolyser_on, cell_on], dtype=np.float32)   #stato aggiornato
+        self.rew_arr.append(reward)
+        self.loss_arr.append(loss_power)
+        self.stor_arr.append(self.storage.actual_quantity)
+        self.state = np.array([self.storage.actual_quantity, energy_produced, production_cost, elec_price, hydrogen_price, elec_demand, electrolyser_on, cell_on], dtype=np.float32)   #stato aggiornato
         done = False
+        truncated = False
 
-        return self.state, reward, done, {}
+        return self.state, float(reward), done, truncated, {}
 
 
 
     def reset(self, seed=None):
-        self.state = np.array([0,5,5,100, 5, 1 ,1], dtype = np.float32)  #stato iniziale da definire
+        super().reset(seed = seed)
+        self.state = np.array([0, 0, 5, 5, 5, 100, 1 ,1], dtype = np.float32)  #stato iniziale da definire
         return self.state,{}
 
 
     def render(self):
         print("")
+
+    def get_res(self):
+        return self.rew_arr, self.stor_arr, self.loss_arr

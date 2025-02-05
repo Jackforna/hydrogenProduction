@@ -1,37 +1,42 @@
 from env import HRS_env
-#from imitation.algorithms.gail import GAIL 
-from imitation.util.util import make_vec_env
 from stable_baselines3 import PPO
 import numpy as np
-#from imitation_data import rollout
+import matplotlib.pyplot as plt
+from icecream import ic             #debugger
+from stable_baselines3.common.env_checker import check_env
+from stable_baselines3.common.callbacks import ProgressBarCallback
 
-vec_env = make_vec_env(HRS_env, n_envs = 1, rng = np.random.default_rng())
+def main():
+    ic.enable()
+    env = HRS_env()
+    check_env(env, warn=True)
+    model = PPO("MlpPolicy", env, verbose=1)
+    model.learn(total_timesteps=10000, progress_bar=ProgressBarCallback())
+    model.save("ppo_HRS")
 
-#creazione traiettorie esperto
-transitions = rollout.flatten_trajectories([
-    rollout.generate_trajectories(lambda obs: np.random.choice(5), vec_env, n_trajectories = 10)
-])
-'''
-#creazione modello GAIL
-gail = GAIL(
-    venv = vec_env,
-    expert_data = transitions,
-    gen_algo = PPO("MlpPolicy", vec_env, verbose = 1)
-)
+    rewards, hydrogen, loss_power = env.get_res()
 
-#training
-gail.train(10000)
+    plt.figure(figsize=(14,10))
+    plt.subplot(3,1,1)
+    plt.plot(rewards)
+    plt.title("Rewards")
 
-#creazione modello RL
-model = PPO("MlpPolicy", vec_env, verbose = 1)
-model.learn(total_timesteps = 50000)
-model.save("hrs_policy")
+    plt.subplot(3,1,2)
+    plt.plot(hydrogen)
+    plt.title("Hydrogen Stored")
 
-#test
-env = HRV_env
-obs, _ = env.reset()
-for _ in range(10):
-    action, _ = model.predict(obs)
-    obs, reward, done, _ = env.step(action)
-    env.render()
-'''
+    plt.subplot(3,1,3)
+    plt.plot(loss_power)
+    plt.title("Loss Power")
+
+    plt.show()
+    env.close()
+
+
+
+
+
+
+
+if __name__ == "__main__":
+    main()
