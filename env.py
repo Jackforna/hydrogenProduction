@@ -24,7 +24,7 @@ class HRS_env(gym.Env):
         #gli stati invece saranno continui poichè rappresentano grandezze variabili nel tempo
         #Stato: quantità idrogeno stoccato, energia prodotta, costo produzione idrogeno, prezzo vendita elettricità, prezzo idrogeno, domanda elettricità, elettrolita in azione, celle in azione
         self.observation_space = spaces.Box(low = np.array([0, 0, 0, 0, 0, 0, 0, 0]),
-                                            high = np.array([500, 200, 10, 10, 10, 30, 1, 1]),
+                                            high = np.array([500, 200, 10, 10, 10, 70, 1, 1]),
                                             dtype = np.float32)
 
         self.storage = hydrogenStorage(max_capacity=500, pressure=350)
@@ -57,11 +57,6 @@ class HRS_env(gym.Env):
             cell_on = 1
             generate_power = self.cell.generatePower(elec_demand)
             revenue += generate_power * elec_price
-            
-            #if generate_power > 0:
-            #    revenue += generate_power * elec_price
-            #else:
-            #    revenue -= 100 #non viene soddisfatta la richiesta energetica
 
         elif action == 2:
             if self.cell.active:
