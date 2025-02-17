@@ -12,11 +12,11 @@ def main():
     env = HRS_env()
     check_env(env, warn=True)
     model = PPO("MlpPolicy", env, verbose=1)
-    model.learn(total_timesteps=100000, progress_bar=ProgressBarCallback())
+    model.learn(total_timesteps=1000000, progress_bar=ProgressBarCallback())
     model.save("ppo_HRS")
 
-    window_size = 100
-    rewards, hydrogen, loss_power = env.get_res()
+    window_size = 1000
+    rewards, hydrogen, loss_power, energy_produced, elec_sold = env.get_res()
     
     #envIRL = HRS_envIRL()
     #check_env(envIRL, warn=True)
@@ -28,13 +28,13 @@ def main():
     rewards_smooth = np.convolve(rewards, np.ones(window_size)/window_size, mode='valid')
 
     plt.figure(figsize=(14,10))
-    plt.subplot(3,1,1)
+    plt.subplot(5,1,1)
     plt.plot(rewards_smooth)
     plt.title("Rewards")
 
     hydrogen_smooth = np.convolve(hydrogen, np.ones(window_size)/window_size, mode='valid')
 
-    plt.subplot(3,1,2)
+    plt.subplot(5,1,2)
     plt.plot(hydrogen_smooth)
     plt.title("Hydrogen Stored")
     
@@ -45,9 +45,19 @@ def main():
     #plt.title("Learned Rewards")
 
     loss_smooth = np.convolve(loss_power, np.ones(window_size)/window_size, mode='valid')
-    plt.subplot(3,1,3)
+    plt.subplot(5,1,3)
     plt.plot(loss_smooth)
     plt.title("Loss Power")
+
+    energy_smooth = np.convolve(energy_produced, np.ones(window_size)/window_size, mode='valid')
+    plt.subplot(5,1,4)
+    plt.plot(energy_smooth)
+    plt.title("Hydrogen sold")
+
+    elec_smooth = np.convolve(elec_sold, np.ones(window_size)/window_size, mode='valid')
+    plt.subplot(5,1,5)
+    plt.plot(elec_smooth)
+    plt.title("Electricity sold")
     
 
     plt.show()

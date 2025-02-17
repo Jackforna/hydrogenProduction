@@ -19,7 +19,7 @@ class HRS_envIRL(gym.Env):
     def __init__(self, bins=10):
         super(HRS_envIRL, self).__init__()
 
-        self.action_space = spaces.Discrete(5)
+        self.action_space = spaces.MultiDiscrete([2,2,2,2,2])
 
         # Stati continui da discretizzare
         self.observation_space = spaces.Box(
@@ -79,6 +79,24 @@ class HRS_envIRL(gym.Env):
 
     def get_res(self):
         return self.trajectories
+
+    def filter_invalid_actions(self, action):
+        #Elimina combinazioni di azioni non valide
+        produce, sell_hydr, sell_elec, block_prod, block_sell = action
+        
+        # Non puoi bloccare e produrre allo stesso tempo
+        if produce == 1 and block_prod == 1:
+            return False
+        
+        # Non puoi bloccare la vendita se non stai vendendo
+        if block_sell == 1 and sell_hydr == 1:
+            return False
+
+        # Non puoi vendere sia da fonti rinnovabili che dall'idrogeno
+        if sell_elec == 1 and sell_hydr == 1:
+            return False
+
+        return True
 
     def expert_policy(self):
         

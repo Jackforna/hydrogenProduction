@@ -17,11 +17,11 @@ class Electrolyser:
         self.time += 1
         return power
    
-    def produceHydrogen(self):  #ritorna la potenza sprecata
+    def produceHydrogen(self, power_generated):  #ritorna la potenza sprecata
         #Calcola la quantità di idrogeno prodotta in base alla potenza generata e la inserisce nel sistema di stoccaggio.
         if self.HSS.actual_quantity < self.HSS.max_capacity:
             self.active = True
-            power_generated = self.powerSupplied()
+            #power_generated = self.powerSupplied()
             hydrogen_produced = power_generated * 0.18  # Conversione potenza a idrogeno (m3/kW)
             if self.HSS.actual_quantity + hydrogen_produced <= self.HSS.max_capacity:
                 self.HSS.addHydrogen(hydrogen_produced)
@@ -34,4 +34,4 @@ class Electrolyser:
         else:
             self.active = False
             print("Hydrogen storage is full, cannot produce more hydrogen.")
-            return 0, 0
+            return 0, power_generated
