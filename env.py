@@ -167,7 +167,7 @@ class HRS_env(gym.Env):
 
     def filter_invalid_actions(self, action):
         #Elimina combinazioni di azioni non valide
-        produce, sell_hydr, sell_elec, block_prod, block_sell = action
+        produce, sell_hydr, _, block_prod, block_sell = action
         
         # Non puoi bloccare e produrre allo stesso tempo
         if produce == 1 and block_prod == 1:
