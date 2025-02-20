@@ -109,7 +109,7 @@ def main():
 
     plt.subplot(5,1,5)
     plt.plot(loss_smooth)
-    plt.title("Electricity sold")
+    plt.title("loss power")
 
     plt.show()
     #env.close()
