@@ -13,7 +13,7 @@ class Electrolyser:
         #Genera un valore di potenza seguendo un andamento sinusoidale.
         width = (self.max_power - self.min_power) / 2
         avg = (self.max_power + self.min_power) / 2
-        power = avg + abs(10* width * math.sin((2 * math.pi / self.period) * self.time))
+        power = avg + width * math.sin((2 * math.pi / self.period) * self.time)
         self.time += 1
         return power
    

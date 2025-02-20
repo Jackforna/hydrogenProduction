@@ -1,24 +1,25 @@
 class FuelCell:
     def __init__(self, power, efficiency, hydrogen_consumption, HSS, active=True):
-        self.power = power
         self.efficiency = efficiency
+        self.power = power
         self.hydrogen_consumption = hydrogen_consumption
         self.active = active
-        self.activity_period = 0
         self.HSS = HSS
 
     def generatePower(self, elec_demand):
+        if self.active:
+            elec_demand = min(elec_demand, self.power)
+            hydrogen_needed = elec_demand * self.hydrogen_consumption
 
-        power_output = min(elec_demand, self.power)
-        hydrogen_needed = power_output * self.hydrogen_consumption
+            if hydrogen_needed > self.HSS.actual_quantity:  #la quantità di idrogeno richiesta è maggiore di quella disponibile
+                hydrogen_needed = self.HSS.actual_quantity
+                elec_demand = hydrogen_needed / self.hydrogen_consumption
 
-        if hydrogen_needed > self.HSS.actual_quantity:  #la quantità di idrogeno richiesta è maggiore di quella disponibile
-            self.active = False
+            self.HSS.removeHydrogen(hydrogen_needed)    #rimuove dallo stoccaggio l'idrogeno usato
+
+            return elec_demand
+        else:
             return 0
-
-        self.HSS.removeHydrogen(hydrogen_needed)    #rimuove dallo stoccaggio l'idrogeno usato
-
-        return power_output
         
 
     

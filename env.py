@@ -29,8 +29,8 @@ class HRS_env(gym.Env):
                                             dtype = np.float32)
 
         self.storage = hydrogenStorage(max_capacity=500, pressure=350)
-        self.cell = FuelCell(power = 50, efficiency = 0.6, hydrogen_consumption = 1.5, HSS=self.storage, active=True)
-        self.electrolyser = Electrolyser(min_power=10, max_power=50, period=10, HSS=self.storage, active=True)
+        self.cell = FuelCell(power = 250, efficiency = 0.6, hydrogen_consumption = 1.5, HSS=self.storage, active=True)
+        self.electrolyser = Electrolyser(min_power=30, max_power=300, period=10, HSS=self.storage, active=True)
         self.state = np.array([0, 0, 2, 5, 5, 50, self.electrolyser.active, self.cell.active], dtype = np.float32)  #stato iniziale da definire
         self.rew_arr = []
         self.stor_arr = []
