@@ -62,6 +62,12 @@ class HRS_envIRL(gym.Env):
         if block_sell == 1 and sell_hydr == 1:
             return False
 
+        if produce == 0 and block_prod == 0:
+            return False
+
+        if block_sell == 0 and sell_hydr == 0:
+            return False
+
         return True
 
     def step(self, action):
@@ -89,7 +95,7 @@ class HRS_envIRL(gym.Env):
                     self.electrolyser.active = True
                 electrolyser_on = 1
                 _, loss = self.electrolyser.produceHydrogen(energy_produced)
-                loss_power += loss
+                loss_power = loss
             else:
                 if not self.electrolyser.active:
                     self.electrolyser.active = True
@@ -105,11 +111,11 @@ class HRS_envIRL(gym.Env):
                     generate_power = self.cell.generatePower(elec_demand)
                     elec_demand -= generate_power
                 if energy_produced > elec_demand:
-                    loss_power += energy_produced - elec_demand
+                    loss_power = energy_produced - elec_demand
                     energy_produced -= loss_power
                     _, loss = self.electrolyser.produceHydrogen(loss_power)
                     loss_power = loss
-                energy_elec += energy_produced
+                energy_elec = energy_produced
 
         if sell_hydr == 1 and sell_elec == 1 and produce == 0:
             if not self.cell.active:
@@ -135,9 +141,8 @@ class HRS_envIRL(gym.Env):
                 self.cell.active = False
             cell_on = 0
             if energy_produced > elec_demand:
-                loss_power += energy_produced - elec_demand
-                energy_produced -= loss_power
-            energy_elec += energy_produced
+                loss_power = energy_produced - elec_demand
+            energy_elec = elec_demand
 
         #Azione: Bloccare produzione
         if block_prod == 1:
@@ -145,7 +150,7 @@ class HRS_envIRL(gym.Env):
                 self.electrolyser.active = False
             electrolyser_on = 0
             if sell_elec == 0 and produce == 0:
-                loss_power += energy_produced
+                loss_power = energy_produced
 
         #Azione: Bloccare vendita
         if block_sell == 1:
@@ -227,7 +232,9 @@ class HRS_envIRL(gym.Env):
             action[0] = 1
             if hydrogen > 100:
                 action[1] = 1
-            if elec_demand > hydrogen*0.18:
+                if elec_demand > hydrogen*0.18:
+                    action[2] = 1
+            else:
                 action[2] = 1
         
         #Se la vendita dell'idrogeno è più redditizia della vendita dell'energia diretta o c'è già abbastanza idrogeno immagazzinato, scegli quella
@@ -236,8 +243,9 @@ class HRS_envIRL(gym.Env):
             if elec_demand > hydrogen*0.18:
                 action[2] = 1
         #Altrimenti, vendi l'energia direttamente
-        else: 
+        else:
             action[2] = 1
+            action[3] = 1
             action[4] = 1
         
         if action[1] == 0:
@@ -312,5 +320,4 @@ class HRS_envIRL(gym.Env):
                # file.write(f"expected_state_visits {expected_state_visits}\n")
                 #file.write(f"rewards {rewards}\n\n")
 
-        print(rewards)
         self.learned_rewards = {state: rewards[idx] for state, idx in state_indices.items()}
