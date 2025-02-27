@@ -88,8 +88,8 @@ class HRS_env(gym.Env):
                 if energy_produced > elec_demand:
                     loss_power += energy_produced - elec_demand
                     energy_produced -= loss_power
-                revenue += energy_produced * elec_price
                 hydrogen_produced, loss = self.electrolyser.produceHydrogen(loss_power)
+                revenue += energy_produced * elec_price
                 loss_power = loss
                 revenue += hydrogen_produced * hydrogen_price
                 costs += production_cost 
@@ -106,8 +106,10 @@ class HRS_env(gym.Env):
             if energy_produced > elec_demand:
                 loss_power += energy_produced - elec_demand
                 energy_produced -= loss_power
-            revenue += energy_produced * elec_price
-            energy_elec += energy_produced
+                energy_elec += energy_produced
+            else:
+                energy_elec += min(elec_demand,energy_produced)
+            revenue += energy_elec * elec_price
 
         #Azione: Vendita di energia prodotta dall'idrogeno
         if sell_hydr == 1 and produce == 0 and sell_elec == 0:

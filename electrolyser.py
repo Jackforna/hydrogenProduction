@@ -7,6 +7,7 @@ class Electrolyser:
         self.active = active
         self.period = period
         self.time = 0
+        self.efficiency = 1.0
         self.HSS = HSS
    
     def powerSupplied(self):
@@ -22,13 +23,13 @@ class Electrolyser:
         if self.HSS.actual_quantity < self.HSS.max_capacity:
             self.active = True
             #power_generated = self.powerSupplied()
-            hydrogen_produced = power_generated * 0.18  # Conversione potenza a idrogeno (m3/kW)
+            hydrogen_produced = power_generated * 0.28 * self.efficiency # Conversione potenza a idrogeno (m3/kW)
             if self.HSS.actual_quantity + hydrogen_produced <= self.HSS.max_capacity:
                 self.HSS.addHydrogen(hydrogen_produced)
                 return hydrogen_produced, 0
             else:
                 self.HSS.addHydrogen(self.HSS.max_capacity - self.HSS.actual_quantity) #riempie al massimo HSS ma perdita di potenza in eccesso, capire come gestirla
-                loss = (hydrogen_produced - (self.HSS.max_capacity - self.HSS.actual_quantity))/0.18
+                loss = (hydrogen_produced - (self.HSS.max_capacity - self.HSS.actual_quantity))/(0.28 * self.efficiency)
             print(f"Generated power: {power_generated:.2f} kW, producing {hydrogen_produced:.2f} m³ of hydrogen.")
             return (self.HSS.max_capacity - self.HSS.actual_quantity), loss
         else:

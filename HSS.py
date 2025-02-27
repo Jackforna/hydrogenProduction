@@ -1,6 +1,6 @@
 class hydrogenStorage:
     def __init__(self, max_capacity, pressure):
-        #Inizializza un HSS.
+        #Inizializza un HSS
         self.max_capacity = max_capacity
         self.pressure = pressure
         self.actual_quantity = 0  # Quantità iniziale di idrogeno (in m3)
