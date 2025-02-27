@@ -179,6 +179,12 @@ class HRS_env(gym.Env):
         if block_sell == 1 and sell_hydr == 1:
             return False
 
+        if produce == 0 and block_prod == 0:
+            return False
+
+        if block_sell == 0 and sell_hydr == 0:
+            return False
+
         return True
 
     def reset(self, *, seed=None, options=None):
