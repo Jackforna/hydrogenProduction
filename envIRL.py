@@ -526,7 +526,7 @@ class HRS_envIRL(gym.Env):
 
     def maxent_irl(self, expert_trajectories, iterations=500, alpha=0.1):
 
-        #Mappa (solo idrogeno, azione) → indice
+        #Mappa (solo idrogeno, azione) - indice
         state_indices = {}
         index = 0
 
@@ -552,7 +552,6 @@ class HRS_envIRL(gym.Env):
 
         state_visits /= np.sum(state_visits) + 1e-6
 
-        # IRL loop
         for _ in range(iterations):
             policy = np.exp(rewards - logsumexp(rewards))  #distribuzione di probabilità sulle traiettorie
             policy /= (np.sum(policy)+1e-6)
@@ -582,13 +581,12 @@ class HRS_envIRL(gym.Env):
 
         grouped_rewards[0] -= 5
 
-        # Mappatura: stato → reward
+        # Mappatura: stato - reward
         self.learned_rewards = {
             (state): grouped_rewards.get(idx, -10)  #-10 se idx non esiste
             for state, idx in state_indices.items()
         }
 
-        # Preparazione per CSV: gruppi di 50 unità H₂ (ogni 10 idx)
         range_to_reward = {}
         for state, idx in state_indices.items():
             group_id = idx // group_size
