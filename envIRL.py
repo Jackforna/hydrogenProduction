@@ -41,7 +41,7 @@ class HRS_envIRL(gym.Env):
         self.storage = hydrogenStorage(max_capacity=500)
         self.cell = FuelCell(power = 600, efficiency=0.8, hydrogen_consumption=3, HSS=self.storage, active=True)
         self.electrolyser = Electrolyser(min_power=30, max_power=600, period=10, HSS=self.storage, active=True)
-        self.state = np.array([0, 80, 5, 5, 50], dtype=np.float32)
+        self.state = np.array([0, 80, 5, 5, 50, 1, 1], dtype=np.float32)
         self.learned_rewards = {}
         self.rew_arr = []
         self.hydr_arr = []
