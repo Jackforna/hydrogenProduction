@@ -9,10 +9,10 @@ def main():
     env = HRS_env()
     check_env(env, warn=True)
     model = PPO("MlpPolicy", env, verbose=0)
-    model.learn(total_timesteps=125000, progress_bar=ProgressBarCallback())
+    model.learn(total_timesteps=50000, progress_bar=ProgressBarCallback())
     model.save("ppo_HRS")
 
-    window_size = 125
+    window_size = 50
 
     rewards, hydrogen, loss_power, energy_produced, elec_sold = env.get_res()
 

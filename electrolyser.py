@@ -22,7 +22,7 @@ class Electrolyser:
         #Calcola la quantità di idrogeno prodotta in base alla potenza generata e la inserisce nel sistema di stoccaggio.
         if self.HSS.actual_quantity < self.HSS.max_capacity:
             self.active = True
-            hydrogen_produced = power_generated * 0.28 * self.efficiency # Conversione potenza a idrogeno (m3/kW)
+            hydrogen_produced = power_generated * 0.2 * self.efficiency # Conversione potenza a idrogeno (m3/kW)
             if self.HSS.actual_quantity + hydrogen_produced <= self.HSS.max_capacity:
                 self.HSS.addHydrogen(hydrogen_produced)
                 return hydrogen_produced, 0
