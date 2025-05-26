@@ -25,18 +25,19 @@ class HRS_env(gym.Env):
         #gli stati invece saranno continui poichè rappresentano grandezze variabili nel tempo
         #Stato: quantità idrogeno stoccato, potenza in ingresso, prezzo vendita elettricità, prezzo idrogeno, domanda elettricità, elettrolita in azione, celle in azione
         self.observation_space = spaces.Box(low = np.array([0, 0, 0, 0, 0, 0, 0]),
-                                            high = np.array([500, 600, 5, 10, 600, 1, 1]),
+                                            high = np.array([500, 2500, 5, 10, 2500, 1, 1]),
                                             dtype = np.float32)
 
         self.storage = hydrogenStorage(max_capacity=500)
-        self.cell = FuelCell(power = 600, efficiency = 0.8, hydrogen_consumption = 3.0, HSS=self.storage, active=True)
-        self.electrolyser = Electrolyser(min_power=30, max_power=600, period=10, HSS=self.storage, active=True)
+        self.cell = FuelCell(power = 2500, efficiency = 0.8, hydrogen_consumption = 3.0, HSS=self.storage, active=True)
+        self.electrolyser = Electrolyser(min_power=30, max_power=2500, period=10, HSS=self.storage, active=True)
         self.state = np.array([0, 80, 3, 8, 50, self.electrolyser.active, self.cell.active], dtype = np.float32)  #stato iniziale da definire
         self.rew_arr = []
         self.stor_arr = []
         self.loss_arr = []
         self.hydr_arr = []
         self.elec_arr = []
+        self.demand_remained_arr = []
 
     def step(self, action):
 
@@ -51,7 +52,7 @@ class HRS_env(gym.Env):
         energy_elec = 0
         elec_price /= 10
         hydrogen_price /= 33.33
-        #demand = elec_demand
+        demand = elec_demand
 
         #Azione produzione idrogeno e vendita elettricità contemporaneamente
         if produce == 1 and block_prod == 0:
@@ -164,8 +165,10 @@ class HRS_env(gym.Env):
             if produce == 0 and sell_elec == 0:
                 loss_power = energy_produced
 
-        #if energy_elec + generate_power < demand and energy_produced > demand:
-            #print("Domanda non soddisfatta")
+        if energy_elec + generate_power < demand and energy_produced > demand:
+            demand -= energy_elec + generate_power
+        else:
+            demand = 0
 
         reward = revenue - (loss_power * elec_price)
         if elec_demand > energy_elec + generate_power:
@@ -175,7 +178,8 @@ class HRS_env(gym.Env):
         self.stor_arr.append(self.storage.actual_quantity)
         self.elec_arr.append(energy_elec)
         self.hydr_arr.append(generate_power)
-        lower, upper = 50, 600  # Limiti
+        self.demand_remained_arr.append(demand)
+        lower, upper = 50, 2500  # Limiti
         mu = (upper + lower) / 2    # Media
         sigma = (upper - lower) / 2  # Deviazione standard
 
@@ -223,4 +227,4 @@ class HRS_env(gym.Env):
         print("")
 
     def get_res(self):
-        return self.rew_arr, self.stor_arr, self.loss_arr, self.hydr_arr, self.elec_arr
+        return self.rew_arr, self.stor_arr, self.loss_arr, self.hydr_arr, self.elec_arr, self.demand_remained_arr

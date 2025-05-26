@@ -27,7 +27,7 @@ class HRS_envIRL(gym.Env):
 
         # Stati continui da discretizzare
         self.observation_space = spaces.Box(low = np.array([0, 0, 0, 0, 0, 0, 0]),
-                                            high = np.array([500, 600, 10, 10, 600, 1, 1]),
+                                            high = np.array([500, 2500, 10, 10, 2500, 1, 1]),
                                             dtype = np.float32)
 
         self.num_bins = [100, 15, 5, 5, 15, 2, 2]
@@ -39,8 +39,8 @@ class HRS_envIRL(gym.Env):
 
 
         self.storage = hydrogenStorage(max_capacity=500)
-        self.cell = FuelCell(power = 600, efficiency=0.8, hydrogen_consumption=3, HSS=self.storage, active=True)
-        self.electrolyser = Electrolyser(min_power=30, max_power=600, period=10, HSS=self.storage, active=True)
+        self.cell = FuelCell(power = 2500, efficiency=0.8, hydrogen_consumption=3, HSS=self.storage, active=True)
+        self.electrolyser = Electrolyser(min_power=30, max_power=2500, period=10, HSS=self.storage, active=True)
         self.state = np.array([0, 80, 5, 5, 50, 1, 1], dtype=np.float32)
         self.learned_rewards = {}
         self.rew_arr = []
@@ -50,6 +50,7 @@ class HRS_envIRL(gym.Env):
         self.loss_arr = []
         self.action_arr = []
         self.demand_arr = []
+        self.demand_remained_arr = []
         self.input_arr = []
         self.states_traj = []
         self.loaded_trajectories = self.load_expert_trajectories()
@@ -234,9 +235,10 @@ class HRS_envIRL(gym.Env):
         self.loss_arr.append(loss_power)
         self.action_arr.append(action)
         self.hydr_arr.append(generate_power)
+        self.demand_remained_arr.append(demand)
         
         
-        lower, upper = 50, 600  # Limiti
+        lower, upper = 50, 2500  # Limiti
         mu = (lower + upper) / 2
         sigma = (upper - lower) / 2
 
@@ -357,7 +359,7 @@ class HRS_envIRL(gym.Env):
         else:
             demand = 0
 
-        lower, upper = 50, 600  # Limiti
+        lower, upper = 50, 2500  # Limiti
         mu = (lower + upper) / 2
         sigma = (upper - lower) / 2
 
@@ -392,7 +394,7 @@ class HRS_envIRL(gym.Env):
         return self.state, {}
 
     def get_res(self):
-        return self.rew_arr, self.hydr_arr, self.stor_arr, self.elec_arr, self.loss_arr
+        return self.rew_arr, self.hydr_arr, self.stor_arr, self.elec_arr, self.loss_arr, self.demand_remained_arr
 
     def render(self):
         print("")
@@ -482,7 +484,7 @@ class HRS_envIRL(gym.Env):
             print("Nessuna traiettoria esperta trovata per il salvataggio.")
 
 
-    def generate_expert_trajectories(self, num_episodes=300):
+    def generate_expert_trajectories(self, num_episodes=600):
         expert_trajectories = []
         
         for i in range(num_episodes):
@@ -494,11 +496,11 @@ class HRS_envIRL(gym.Env):
             std_dev = (b-a)/2
             self.state[1] = np.random.normal(loc = mean, scale = std_dev)
             self.state[1] =  np.clip(float(self.state[1]), self.electrolyser.min_power, self.electrolyser.max_power)
-            a, b = 50, 600
+            a, b = 50, 2500
             mean = (a+b)/2
             std_dev = (b-a)/2
             self.state[4] = np.random.normal(loc = mean, scale = std_dev)
-            self.state[4] =  np.clip(float(self.state[4]), 50, 600)
+            self.state[4] =  np.clip(float(self.state[4]), 50, 2500)
 
             episode = []
             summ = 0
@@ -514,9 +516,10 @@ class HRS_envIRL(gym.Env):
                     n = 0
                     summ = 0
             expert_trajectories.append(episode)
+        
         return expert_trajectories
 
-    def train_irl(self, num_episodes=300, iterations=500, alpha=0.1):
+    def train_irl(self, num_episodes=600, iterations=500, alpha=0.1):
         #expert_trajectories = self.generate_expert_trajectories(num_episodes)
         #self.save_expert_trajectories(expert_trajectories)
         #expert_trajectories += self.loaded_trajectories
@@ -526,7 +529,7 @@ class HRS_envIRL(gym.Env):
 
     def maxent_irl(self, expert_trajectories, iterations=500, alpha=0.1):
 
-        #Mappa (solo idrogeno, azione) - indice
+        #Mappa (solo idrogeno) - indice
         state_indices = {}
         index = 0
 

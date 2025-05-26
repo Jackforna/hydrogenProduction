@@ -8,7 +8,7 @@ from stable_baselines3.common.callbacks import ProgressBarCallback
 
 def main():
     
-    window_size = 125
+    window_size = 200
     
     envIRL = HRS_envIRL()
     check_env(envIRL, warn=True)
@@ -16,17 +16,18 @@ def main():
     envIRL.train_irl()
 
     model = PPO("MlpPolicy", envIRL, verbose=0)
-    model.learn(total_timesteps=125000, progress_bar=ProgressBarCallback())
+    model.learn(total_timesteps=200000, progress_bar=ProgressBarCallback())
     model.save("ppo_HRS_IRL")
 
-    learned_rewards, hydrogen_sold, hydrogen_stored, electricity_sold, loss = envIRL.get_res()
+    learned_rewards, hydrogen_sold, hydrogen_stored, electricity_sold, loss, demand = envIRL.get_res()
 
     df = pd.DataFrame({
         "learned_rewards": learned_rewards,
         "hydrogen_sold": hydrogen_sold,
         "hydrogen_stored": hydrogen_stored,
         "electricity_sold": electricity_sold,
-        "loss_power": loss
+        "loss_power": loss,
+        "demand_remained": demand
     })
 
     # Salva il DataFrame in un file CSV
@@ -63,6 +64,13 @@ def main():
     plt.subplot(5,1,5)
     plt.plot(loss_smooth)
     plt.title("loss power")
+
+    fig = plt.figure(figsize=(14,10))
+    dem_smooth = np.convolve(demand, np.ones(window_size)/window_size, mode='valid')
+
+    plt.subplot(1,1,1)
+    plt.plot(dem_smooth)
+    plt.title("demand remained")
     
     plt.show()
     envIRL.close()

@@ -9,12 +9,12 @@ def main():
     env = HRS_env()
     check_env(env, warn=True)
     model = PPO("MlpPolicy", env, verbose=0)
-    model.learn(total_timesteps=50000, progress_bar=ProgressBarCallback())
+    model.learn(total_timesteps=200000, progress_bar=ProgressBarCallback())
     model.save("ppo_HRS")
 
-    window_size = 50
+    window_size = 200
 
-    rewards, hydrogen, loss_power, energy_produced, elec_sold = env.get_res()
+    rewards, hydrogen, loss_power, energy_produced, elec_sold, demand = env.get_res()
 
     rewards_smooth = np.convolve(rewards, np.ones(window_size)/window_size, mode='valid')
 
@@ -44,6 +44,13 @@ def main():
     plt.subplot(5,1,5)
     plt.plot(loss_smooth)
     plt.title("Loss Power")
+
+    fig = plt.figure(figsize=(14,10))
+    dem_smooth = np.convolve(demand, np.ones(window_size)/window_size, mode='valid')
+
+    plt.subplot(1,1,1)
+    plt.plot(dem_smooth)
+    plt.title("demand remained")
 
     plt.show()
     env.close()
