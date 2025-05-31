@@ -7,7 +7,7 @@ from stable_baselines3.common.env_checker import check_env
 from stable_baselines3.common.callbacks import ProgressBarCallback
 
 def main():
-    env = HRS_env_disc()
+    env = HRS_env()
     check_env(env, warn=True)
     model = PPO("MlpPolicy", env, verbose=0)
     model.learn(total_timesteps=100000, progress_bar=ProgressBarCallback())

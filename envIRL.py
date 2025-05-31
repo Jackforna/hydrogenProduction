@@ -27,7 +27,7 @@ class HRS_envIRL(gym.Env):
 
         # Stati continui da discretizzare
         self.observation_space = spaces.Box(low = np.array([0, 0, 0, 0, 0, 0, 0]),
-                                            high = np.array([500, 3200, 10, 10, 3200, 1, 1]),
+                                            high = np.array([1000, 3200, 10, 10, 3200, 1, 1]),
                                             dtype = np.float32)
 
         self.num_bins = [100, 15, 5, 5, 15, 2, 2]
@@ -38,7 +38,7 @@ class HRS_envIRL(gym.Env):
         ]
 
 
-        self.storage = hydrogenStorage(max_capacity=500)
+        self.storage = hydrogenStorage(max_capacity=1000)
         self.cell = FuelCell(power = 3200, efficiency=0.8, hydrogen_consumption=3, HSS=self.storage, active=True)
         self.electrolyser = Electrolyser(min_power=30, max_power=3200, period=10, HSS=self.storage, active=True)
         self.state = np.array([0, 80, 5, 5, 50, 1, 1], dtype=np.float32)
@@ -84,7 +84,7 @@ class HRS_envIRL(gym.Env):
         return expert_trajectories
 
     def discretize_state(self, state, demand_remained, loss_power):
-        
+        state = min(state, 1000)
         return tuple([int(np.digitize(state, self.bin_edges[0])),demand_remained, loss_power])
 
     def filter_invalid_actions(self, action):
@@ -484,13 +484,13 @@ class HRS_envIRL(gym.Env):
             print("Nessuna traiettoria esperta trovata per il salvataggio.")
 
 
-    def generate_expert_trajectories(self, num_episodes=600):
+    def generate_expert_trajectories(self, num_episodes=300):
         expert_trajectories = []
         
         for i in range(num_episodes):
             print(f"\nTraiettoria esperta n.{i}\n")
             self.state, _ = self.reset()
-            self.state[0] = np.random.uniform(100,400)
+            self.state[0] = np.random.uniform(100,900)
             a, b = self.electrolyser.min_power, self.electrolyser.max_power
             mean = (a+b)/2
             std_dev = (b-a)/2
@@ -519,7 +519,7 @@ class HRS_envIRL(gym.Env):
         
         return expert_trajectories
 
-    def train_irl(self, num_episodes=600, iterations=500, alpha=0.1):
+    def train_irl(self, num_episodes=300, iterations=500, alpha=0.1):
         expert_trajectories = self.generate_expert_trajectories(num_episodes)
         self.save_expert_trajectories(expert_trajectories)
         expert_trajectories += self.loaded_trajectories
@@ -599,9 +599,14 @@ class HRS_envIRL(gym.Env):
         # Creazione CSV
         df = pd.DataFrame({
             "state_range": [
-                f"{g*5*group_size}-{min((g+1)*5*group_size, 500)}" for g in range_to_reward.keys()
+                f"{g*10*group_size}-{min((g+1)*10*group_size, 1000)}"
+                for g in range_to_reward.keys()
+                if g*10*group_size < 1000
             ],
-            "reward": list(range_to_reward.values())
+            "reward": [
+                r for g, r in range_to_reward.items()
+                if g*10*group_size < 1000
+            ]
         })
         # Salva in un file CSV
         df.to_csv("learned_rewards.csv", index=False)
