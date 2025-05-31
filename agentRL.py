@@ -1,18 +1,19 @@
 import numpy as np
 from env import HRS_env
+from env_discrete import HRS_env_disc
 from stable_baselines3 import PPO
 import matplotlib.pyplot as plt
 from stable_baselines3.common.env_checker import check_env
 from stable_baselines3.common.callbacks import ProgressBarCallback
 
 def main():
-    env = HRS_env()
+    env = HRS_env_disc()
     check_env(env, warn=True)
     model = PPO("MlpPolicy", env, verbose=0)
-    model.learn(total_timesteps=200000, progress_bar=ProgressBarCallback())
+    model.learn(total_timesteps=100000, progress_bar=ProgressBarCallback())
     model.save("ppo_HRS")
 
-    window_size = 200
+    window_size = 100
 
     rewards, hydrogen, loss_power, energy_produced, elec_sold, demand = env.get_res()
 

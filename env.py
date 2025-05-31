@@ -25,12 +25,12 @@ class HRS_env(gym.Env):
         #gli stati invece saranno continui poichè rappresentano grandezze variabili nel tempo
         #Stato: quantità idrogeno stoccato, potenza in ingresso, prezzo vendita elettricità, prezzo idrogeno, domanda elettricità, elettrolita in azione, celle in azione
         self.observation_space = spaces.Box(low = np.array([0, 0, 0, 0, 0, 0, 0]),
-                                            high = np.array([500, 2500, 5, 10, 2500, 1, 1]),
+                                            high = np.array([500, 4000, 5, 10, 4000, 1, 1]),
                                             dtype = np.float32)
 
         self.storage = hydrogenStorage(max_capacity=500)
-        self.cell = FuelCell(power = 2500, efficiency = 0.8, hydrogen_consumption = 3.0, HSS=self.storage, active=True)
-        self.electrolyser = Electrolyser(min_power=30, max_power=2500, period=10, HSS=self.storage, active=True)
+        self.cell = FuelCell(power = 4000, efficiency = 0.8, hydrogen_consumption = 3.0, HSS=self.storage, active=True)
+        self.electrolyser = Electrolyser(min_power=30, max_power=4000, period=10, HSS=self.storage, active=True)
         self.state = np.array([0, 80, 3, 8, 50, self.electrolyser.active, self.cell.active], dtype = np.float32)  #stato iniziale da definire
         self.rew_arr = []
         self.stor_arr = []
@@ -179,7 +179,7 @@ class HRS_env(gym.Env):
         self.elec_arr.append(energy_elec)
         self.hydr_arr.append(generate_power)
         self.demand_remained_arr.append(demand)
-        lower, upper = 50, 2500  # Limiti
+        lower, upper = 50, 4000  # Limiti
         mu = (upper + lower) / 2    # Media
         sigma = (upper - lower) / 2  # Deviazione standard
 

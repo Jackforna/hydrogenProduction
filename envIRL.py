@@ -27,7 +27,7 @@ class HRS_envIRL(gym.Env):
 
         # Stati continui da discretizzare
         self.observation_space = spaces.Box(low = np.array([0, 0, 0, 0, 0, 0, 0]),
-                                            high = np.array([500, 2500, 10, 10, 2500, 1, 1]),
+                                            high = np.array([500, 3200, 10, 10, 3200, 1, 1]),
                                             dtype = np.float32)
 
         self.num_bins = [100, 15, 5, 5, 15, 2, 2]
@@ -39,8 +39,8 @@ class HRS_envIRL(gym.Env):
 
 
         self.storage = hydrogenStorage(max_capacity=500)
-        self.cell = FuelCell(power = 2500, efficiency=0.8, hydrogen_consumption=3, HSS=self.storage, active=True)
-        self.electrolyser = Electrolyser(min_power=30, max_power=2500, period=10, HSS=self.storage, active=True)
+        self.cell = FuelCell(power = 3200, efficiency=0.8, hydrogen_consumption=3, HSS=self.storage, active=True)
+        self.electrolyser = Electrolyser(min_power=30, max_power=3200, period=10, HSS=self.storage, active=True)
         self.state = np.array([0, 80, 5, 5, 50, 1, 1], dtype=np.float32)
         self.learned_rewards = {}
         self.rew_arr = []
@@ -238,7 +238,7 @@ class HRS_envIRL(gym.Env):
         self.demand_remained_arr.append(demand)
         
         
-        lower, upper = 50, 2500  # Limiti
+        lower, upper = 50, 3200  # Limiti
         mu = (lower + upper) / 2
         sigma = (upper - lower) / 2
 
@@ -359,7 +359,7 @@ class HRS_envIRL(gym.Env):
         else:
             demand = 0
 
-        lower, upper = 50, 2500  # Limiti
+        lower, upper = 50, 3200  # Limiti
         mu = (lower + upper) / 2
         sigma = (upper - lower) / 2
 
@@ -496,11 +496,11 @@ class HRS_envIRL(gym.Env):
             std_dev = (b-a)/2
             self.state[1] = np.random.normal(loc = mean, scale = std_dev)
             self.state[1] =  np.clip(float(self.state[1]), self.electrolyser.min_power, self.electrolyser.max_power)
-            a, b = 50, 2500
+            a, b = 50, 3200
             mean = (a+b)/2
             std_dev = (b-a)/2
             self.state[4] = np.random.normal(loc = mean, scale = std_dev)
-            self.state[4] =  np.clip(float(self.state[4]), 50, 2500)
+            self.state[4] =  np.clip(float(self.state[4]), 50, 3200)
 
             episode = []
             summ = 0
@@ -520,10 +520,10 @@ class HRS_envIRL(gym.Env):
         return expert_trajectories
 
     def train_irl(self, num_episodes=600, iterations=500, alpha=0.1):
-        #expert_trajectories = self.generate_expert_trajectories(num_episodes)
-        #self.save_expert_trajectories(expert_trajectories)
-        #expert_trajectories += self.loaded_trajectories
-        expert_trajectories = self.loaded_trajectories
+        expert_trajectories = self.generate_expert_trajectories(num_episodes)
+        self.save_expert_trajectories(expert_trajectories)
+        expert_trajectories += self.loaded_trajectories
+        #expert_trajectories = self.loaded_trajectories
 
         self.maxent_irl(expert_trajectories, iterations, alpha)
 
@@ -576,7 +576,7 @@ class HRS_envIRL(gym.Env):
         group_size = 10
 
         # Raggruppa gli idx in blocchi da 10
-        for i in range(0, 101, group_size):
+        for i in range(0, max(state_indices.values()) + 1, group_size):
             group = [j for j in range(i, i + group_size) if j < len(rewards)]
             avg = np.mean([rewards[j] for j in group])
             for j in group:

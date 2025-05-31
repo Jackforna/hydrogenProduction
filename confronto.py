@@ -10,12 +10,12 @@ def main():
     env = HRS_env()
     check_env(env, warn=True)
     model = PPO("MlpPolicy", env, verbose=0)
-    model.learn(total_timesteps=100000, progress_bar=ProgressBarCallback())
+    model.learn(total_timesteps=200000, progress_bar=ProgressBarCallback())
     model.save("ppo_HRS")
 
-    window_size = 100
+    window_size = 200
 
-    rewards, hydrogen, loss_power, hydrogen_produced, elec_sold = env.get_res()
+    rewards, hydrogen, loss_power, hydrogen_produced, elec_sold, demand_remained = env.get_res()
 
     csv_file = "training_data.csv"
     old_data = pd.read_csv(csv_file)
