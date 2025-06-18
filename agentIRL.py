@@ -8,7 +8,7 @@ from stable_baselines3.common.callbacks import ProgressBarCallback
 
 def main():
     
-    window_size = 100
+    window_size = 125
     
     envIRL = HRS_envIRL()
     check_env(envIRL, warn=True)
@@ -16,7 +16,7 @@ def main():
     envIRL.train_irl()
 
     model = PPO("MlpPolicy", envIRL, verbose=0)
-    model.learn(total_timesteps=100000, progress_bar=ProgressBarCallback())
+    model.learn(total_timesteps=125000, progress_bar=ProgressBarCallback())
     model.save("ppo_HRS_IRL")
 
     learned_rewards, hydrogen_sold, hydrogen_stored, electricity_sold, loss, demand = envIRL.get_res()

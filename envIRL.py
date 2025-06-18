@@ -27,20 +27,19 @@ class HRS_envIRL(gym.Env):
 
         # Stati continui da discretizzare
         self.observation_space = spaces.Box(low = np.array([0, 0, 0, 0, 0, 0, 0]),
-                                            high = np.array([1000, 3200, 10, 10, 3200, 1, 1]),
+                                            high = np.array([500, 2500, 10, 10, 2500, 1, 1]),
                                             dtype = np.float32)
 
-        self.num_bins = [100, 15, 5, 5, 15, 2, 2]
+        self.num_bins = [100, 150, 5, 5, 150, 2, 2]
 
         self.bin_edges = [
             np.linspace(low, high, num_bins, endpoint=False)if num_bins > 2 else None
             for low, high, num_bins in zip(self.observation_space.low, self.observation_space.high, self.num_bins)
         ]
 
-
-        self.storage = hydrogenStorage(max_capacity=1000)
-        self.cell = FuelCell(power = 3200, efficiency=0.8, hydrogen_consumption=3, HSS=self.storage, active=True)
-        self.electrolyser = Electrolyser(min_power=30, max_power=3200, period=10, HSS=self.storage, active=True)
+        self.storage = hydrogenStorage(max_capacity=500)
+        self.cell = FuelCell(power = 2500, efficiency=0.8, hydrogen_consumption=3, HSS=self.storage, active=True)
+        self.electrolyser = Electrolyser(min_power=30, max_power=2500, period=10, HSS=self.storage, active=True)
         self.state = np.array([0, 80, 5, 5, 50, 1, 1], dtype=np.float32)
         self.learned_rewards = {}
         self.rew_arr = []
@@ -51,12 +50,11 @@ class HRS_envIRL(gym.Env):
         self.action_arr = []
         self.demand_arr = []
         self.demand_remained_arr = []
+        self.revenue_arr = []
         self.input_arr = []
         self.states_traj = []
         self.loaded_trajectories = self.load_expert_trajectories()
         self.len_episodes = 5000
-        self.demand_remained = 0
-        self.loss_remained = 0
 
     def load_expert_trajectories(self, filename="expert_trajectories.csv"):
     
@@ -83,9 +81,9 @@ class HRS_envIRL(gym.Env):
 
         return expert_trajectories
 
-    def discretize_state(self, state, demand_remained, loss_power):
-        state = min(state, 1000)
-        return tuple([int(np.digitize(state, self.bin_edges[0])),demand_remained, loss_power])
+    def discretize_state(self, state, loss_power, demand_remained):
+        state = min(state, 500)
+        return tuple([int(np.digitize(state, self.bin_edges[0])), loss_power, demand_remained])
 
     def filter_invalid_actions(self, action):
 
@@ -136,7 +134,7 @@ class HRS_envIRL(gym.Env):
                 if not self.electrolyser.active:
                     self.electrolyser.active = True
                 electrolyser_on = 1
-                self.electrolyser.produceHydrogen(energy_produced)
+                h, l = self.electrolyser.produceHydrogen(energy_produced)
                 loss_power = 0
             else:
                 if not self.electrolyser.active:
@@ -146,6 +144,7 @@ class HRS_envIRL(gym.Env):
                     if self.cell.active:
                         self.cell.active = False
                     cell_on = 0
+
                 else:
                     if not self.cell.active:
                         self.cell.active = True
@@ -156,7 +155,7 @@ class HRS_envIRL(gym.Env):
                 if energy_produced > elec_demand:
                     loss_power += energy_produced - elec_demand
                     energy_produced -= loss_power
-                    self.electrolyser.produceHydrogen(loss_power)
+                    h, l = self.electrolyser.produceHydrogen(loss_power)
                     loss_power = 0
                 revenue += energy_produced * elec_price
                 energy_elec += energy_produced
@@ -222,12 +221,11 @@ class HRS_envIRL(gym.Env):
             demand = 0
 
         if self.storage.actual_quantity > self.storage.max_capacity * 9/10:
-            state_tuple = self.discretize_state(450, demand, loss_power)
+            state_tuple = self.discretize_state(450, loss_power, demand)
         else:
-            state_tuple = self.discretize_state(self.storage.actual_quantity, demand, loss_power)
+            state_tuple = self.discretize_state(self.storage.actual_quantity, loss_power, demand)
 
         # Recupera la reward appresa dall'IRL, se disponibile
-        
         reward = self.learned_rewards.get((state_tuple), -10)
         self.rew_arr.append(reward)
         self.stor_arr.append(self.storage.actual_quantity)
@@ -236,9 +234,11 @@ class HRS_envIRL(gym.Env):
         self.action_arr.append(action)
         self.hydr_arr.append(generate_power)
         self.demand_remained_arr.append(demand)
+
+        revenue = revenue - (loss_power * elec_price)
+        self.revenue_arr.append(revenue)
         
-        
-        lower, upper = 50, 3200  # Limiti
+        lower, upper = 50, 2500  # Limiti
         mu = (lower + upper) / 2
         sigma = (upper - lower) / 2
 
@@ -281,7 +281,7 @@ class HRS_envIRL(gym.Env):
                 if not self.electrolyser.active:
                     self.electrolyser.active = True
                 electrolyser_on = 1
-                self.electrolyser.produceHydrogen(energy_produced)
+                h, l = self.electrolyser.produceHydrogen(energy_produced)
                 loss_power = 0
             else:
                 if not self.electrolyser.active:
@@ -300,7 +300,7 @@ class HRS_envIRL(gym.Env):
                 if energy_produced > elec_demand:
                     loss_power = energy_produced - elec_demand
                     energy_produced -= loss_power
-                    self.electrolyser.produceHydrogen(loss_power)
+                    h, l = self.electrolyser.produceHydrogen(loss_power)
                     loss_power = 0
                 energy_elec = energy_produced
 
@@ -359,7 +359,7 @@ class HRS_envIRL(gym.Env):
         else:
             demand = 0
 
-        lower, upper = 50, 3200  # Limiti
+        lower, upper = 50, 2500  # Limiti
         mu = (lower + upper) / 2
         sigma = (upper - lower) / 2
 
@@ -375,18 +375,15 @@ class HRS_envIRL(gym.Env):
         # Aggiorna lo stato basandosi sull'azione
         self.state = np.array([self.storage.actual_quantity, float(energy_produced), elec_price, hydrogen_price, float(elec_demand), electrolyser_on, cell_on], dtype=np.float32)
         # Stato attuale discretizzato
-        state_tuple = self.discretize_state(self.storage.actual_quantity, demand, loss_power)
+        state_tuple = self.discretize_state(self.storage.actual_quantity, loss_power, demand)
 
         # Recupera la reward appresa dall'IRL, se disponibile
-        reward = self.learned_rewards.get((state_tuple), -0.01)  # Penalità di default se lo stato non ha una reward appresa
-        
-        self.loss_remained = loss_power
-        self.demand_remained = demand
+        reward = self.learned_rewards.get((state_tuple), -10)  # Penalità di default se lo stato non ha una reward appresa
         
         done = False
         truncated = False
 
-        return self.state, float(reward), done, truncated, {}
+        return self.state, float(reward), done, truncated, {}, loss_power, demand
 
     def reset(self, *, seed=None, options=None):
         super().reset(seed=seed)
@@ -394,31 +391,27 @@ class HRS_envIRL(gym.Env):
         return self.state, {}
 
     def get_res(self):
-        return self.rew_arr, self.hydr_arr, self.stor_arr, self.elec_arr, self.loss_arr, self.demand_remained_arr
+        return self.revenue_arr, self.hydr_arr, self.stor_arr, self.elec_arr, self.loss_arr, self.demand_remained_arr  #rew_arr se si vuole le reward del IRL
 
     def render(self):
         print("")
 
     def expert_policy(self):
-        hydrogen, energy_produced, _, _, elec_demand, _, _ = self.state
+        hydrogen, energy_produced, elec_price, hydrogen_price, elec_demand, _, _ = self.state
         
         action = [0, 0, 0, 0, 0]
-        #PRODUCE = 0                 
-        #SELL_HYDR = 1              
-        #SELL_ELEC = 2              
-        #BLOCK_PRODUCTION = 3       
-        #BLOCK_SELL = 4 
         
         #Se il serbatoio è pieno, interrompi la produzione di idrogeno
         if hydrogen >= self.storage.max_capacity * 9/10:
             action[1] = 1
+            
             if elec_demand > hydrogen*self.cell.hydrogen_consumption*self.cell.efficiency:
                 action[2] = 1
-                action[3] = 1
-            elif energy_produced > 0:
-                action[0] = 1
+            #elif energy_produced > 0:
+            #    action[0] = 1
+            action[3] = 1
 
-        elif hydrogen < self.storage.max_capacity * 1/10:
+        elif hydrogen < self.storage.max_capacity * 2/10:
             action[0] = 1
             action[2] = 1
             action[4] = 1
@@ -426,8 +419,8 @@ class HRS_envIRL(gym.Env):
         elif elec_demand >= energy_produced:
             action[1] = 1
             if elec_demand >= hydrogen*self.cell.hydrogen_consumption*self.cell.efficiency:
+                action[2] = 1
                 if elec_demand >= hydrogen*self.cell.hydrogen_consumption*self.cell.efficiency + energy_produced:
-                    action[2] = 1
                     action[3] = 1
                 else:
                     action[0] = 1
@@ -437,8 +430,7 @@ class HRS_envIRL(gym.Env):
         #Se l'idrogeno è sotto il 100% e c'è energia disponibile, vendi e produci idrogeno con l'eccesso
         elif hydrogen < self.storage.max_capacity and energy_produced > elec_demand:
             action[0] = 1
-            #if hydrogen > self.storage.max_capacity * 1/10 and hydrogen_price < elec_price:
-            if hydrogen > self.storage.max_capacity * 1/10:
+            if hydrogen > self.storage.max_capacity * 1/10 and hydrogen_price < elec_price:
                 action[1] = 1
                 if elec_demand > hydrogen*self.cell.hydrogen_consumption*self.cell.efficiency:
                     action[2] = 1
@@ -484,46 +476,46 @@ class HRS_envIRL(gym.Env):
             print("Nessuna traiettoria esperta trovata per il salvataggio.")
 
 
-    def generate_expert_trajectories(self, num_episodes=300):
+    def generate_expert_trajectories(self, num_episodes=600):
         expert_trajectories = []
         
         for i in range(num_episodes):
             print(f"\nTraiettoria esperta n.{i}\n")
             self.state, _ = self.reset()
-            self.state[0] = np.random.uniform(100,900)
+            self.state[0] = np.random.uniform(100,400)
             a, b = self.electrolyser.min_power, self.electrolyser.max_power
             mean = (a+b)/2
             std_dev = (b-a)/2
             self.state[1] = np.random.normal(loc = mean, scale = std_dev)
             self.state[1] =  np.clip(float(self.state[1]), self.electrolyser.min_power, self.electrolyser.max_power)
-            a, b = 50, 3200
+            a, b = 50, 2500
             mean = (a+b)/2
             std_dev = (b-a)/2
             self.state[4] = np.random.normal(loc = mean, scale = std_dev)
-            self.state[4] =  np.clip(float(self.state[4]), 50, 3200)
+            self.state[4] =  np.clip(float(self.state[4]), 50, 2500)
 
             episode = []
             summ = 0
             n = 0
             for _ in range(self.len_episodes):
                 action = self.expert_policy()
-                next_state, _, _, _, _ = self.step_IRL(action)
+                next_state, _, _, _, _, loss_remained, demand_remained = self.step_IRL(action)
                 self.state = next_state
                 n += 1
                 summ += self.state[0]
                 if n == 10:
-                    episode.append((self.discretize_state(summ/10, int(self.demand_remained), int(self.loss_remained)), action))
+                    episode.append((self.discretize_state(summ/10, int(loss_remained), int(demand_remained)), action))
                     n = 0
                     summ = 0
             expert_trajectories.append(episode)
         
         return expert_trajectories
 
-    def train_irl(self, num_episodes=300, iterations=500, alpha=0.1):
-        expert_trajectories = self.generate_expert_trajectories(num_episodes)
-        self.save_expert_trajectories(expert_trajectories)
-        expert_trajectories += self.loaded_trajectories
-        #expert_trajectories = self.loaded_trajectories
+    def train_irl(self, num_episodes=600, iterations=500, alpha=0.1):
+        #expert_trajectories = self.generate_expert_trajectories(num_episodes)
+        #self.save_expert_trajectories(expert_trajectories)
+        #expert_trajectories += self.loaded_trajectories
+        expert_trajectories = self.loaded_trajectories
 
         self.maxent_irl(expert_trajectories, iterations, alpha)
 
@@ -553,7 +545,8 @@ class HRS_envIRL(gym.Env):
                 full_state = (hydrogen_level, loss_power, demand_remained)
                 state_visits[state_indices[full_state]] += 1
 
-        state_visits /= np.sum(state_visits) + 1e-6
+        #state_visits /= np.sum(state_visits) + 1e-6
+        state_visits = state_visits / np.max(state_visits + 1e-6)
 
         for _ in range(iterations):
             policy = np.exp(rewards - logsumexp(rewards))  #distribuzione di probabilità sulle traiettorie
@@ -599,13 +592,13 @@ class HRS_envIRL(gym.Env):
         # Creazione CSV
         df = pd.DataFrame({
             "state_range": [
-                f"{g*10*group_size}-{min((g+1)*10*group_size, 1000)}"
+                f"{g*5*group_size}-{min((g+1)*5*group_size, 500)}"
                 for g in range_to_reward.keys()
-                if g*10*group_size < 1000
+                if g*5*group_size < 500
             ],
             "reward": [
                 r for g, r in range_to_reward.items()
-                if g*10*group_size < 1000
+                if g*5*group_size < 500
             ]
         })
         # Salva in un file CSV

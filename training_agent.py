@@ -23,19 +23,19 @@ def main():
         
         # Aggiungi tutti i bin di hydrogen_level da low a high-1
         for h in range(low, high):
-            learned_rewards[(h, 0, 0)] = reward
+            learned_rewards[(h, 500, 0, 0)] = reward
 
     envIRL.learned_rewards = learned_rewards
     
     model = PPO.load("ppo_HRS_IRL.zip", envIRL, verbose=0)
 
     
-    model.learn(total_timesteps=75000, reset_num_timesteps=False, progress_bar=ProgressBarCallback())
+    model.learn(total_timesteps=100000, reset_num_timesteps=False, progress_bar=ProgressBarCallback())
     model.save("ppo_HRS_IRL")
 
     csv_file = "training_data.csv"
 
-    learned_rewards, hydrogen_sold, hydrogen_stored, electricity_sold, loss = envIRL.get_res()
+    learned_rewards, hydrogen_sold, hydrogen_stored, electricity_sold, loss, demand = envIRL.get_res()
     #learned_rewards, hydrogen_stored, loss, hydrogen_sold, electricity_sold = env.get_res()
     
     

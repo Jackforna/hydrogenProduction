@@ -25,10 +25,14 @@ class Electrolyser:
             hydrogen_produced = power_generated * 0.2 * self.efficiency # Conversione potenza a idrogeno (m3/kW)
             if self.HSS.actual_quantity + hydrogen_produced <= self.HSS.max_capacity:
                 self.HSS.addHydrogen(hydrogen_produced)
-                return hydrogen_produced, 0
+                loss = 0
+                return hydrogen_produced, loss
             else:
-                self.HSS.addHydrogen(self.HSS.max_capacity - self.HSS.actual_quantity) #riempie al massimo HSS ma perdita di potenza in eccesso, capire come gestirla
+                self.HSS.addHydrogen(self.HSS.max_capacity - self.HSS.actual_quantity) #riempie al massimo HSS ma perdita di potenza in eccesso
+                loss = power_generated - ((self.HSS.max_capacity - self.HSS.actual_quantity) / (0.2 * self.efficiency))
+                return hydrogen_produced, loss
             #print(f"Generated power: {power_generated:.2f} kW, producing {hydrogen_produced:.2f} m³ of hydrogen.")
         else:
             self.active = False
+            return 0, power_generated
             #print("Hydrogen storage is full, cannot produce more hydrogen.")

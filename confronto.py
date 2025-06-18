@@ -10,10 +10,10 @@ def main():
     env = HRS_env()
     check_env(env, warn=True)
     model = PPO("MlpPolicy", env, verbose=0)
-    model.learn(total_timesteps=200000, progress_bar=ProgressBarCallback())
+    model.learn(total_timesteps= 125000, progress_bar=ProgressBarCallback())
     model.save("ppo_HRS")
 
-    window_size = 200
+    window_size = 125
 
     rewards, hydrogen, loss_power, hydrogen_produced, elec_sold, demand_remained = env.get_res()
 
@@ -24,6 +24,7 @@ def main():
     hydrogen_stored = list(old_data["hydrogen_stored"].values)[:len(hydrogen_produced)]
     electricity_sold = list(old_data["electricity_sold"].values)[:len(elec_sold)]
     loss = list(old_data["loss_power"].values)[:len(loss_power)]
+    demand = list(old_data["demand_remained"].values)[:len(demand_remained)]
     
     rewards = np.convolve(rewards, np.ones(window_size)/window_size, mode='valid')
     learned_rewards = np.convolve(learned_rewards, np.ones(window_size)/window_size, mode='valid')
@@ -35,6 +36,8 @@ def main():
     electricity_sold = np.convolve(electricity_sold, np.ones(window_size)/window_size, mode='valid')
     loss_power = np.convolve(loss_power, np.ones(window_size)/window_size, mode='valid')
     loss = np.convolve(loss, np.ones(window_size)/window_size, mode='valid')
+    demand_remained = np.convolve(demand_remained, np.ones(window_size)/window_size, mode='valid')
+    demand = np.convolve(demand, np.ones(window_size)/window_size, mode='valid')
 
     val = max(rewards) / max(learned_rewards)
     rewards = [reward / val for reward in rewards]
@@ -46,7 +49,7 @@ def main():
     # Plot sovrapposti con colori e label
     axs[0].plot(x, rewards, label='RL', color='blue')
     axs[0].plot(x, learned_rewards, label='IRL', color='orange')
-    axs[0].set_title('Rewards')
+    axs[0].set_title('Profit')
     axs[0].legend()
 
     axs[1].plot(x, hydrogen_produced, label='RL', color='blue')
@@ -64,6 +67,13 @@ def main():
     axs[4].plot(x, loss_power, label='RL', color='blue')
     axs[4].plot(x, loss, label='IRL', color='orange')
     axs[4].set_title('Loss Power')
+
+    fig, ax = plt.subplots(1, 1, figsize=(15, 8), sharex=True)
+
+    # Plot sovrapposti con colori e label
+    ax.plot(x, demand_remained, label='RL', color='blue')
+    ax.plot(x, demand, label='IRL', color='orange')
+    ax.set_title('Demand Remained')
     
     plt.show()
     env.close()
